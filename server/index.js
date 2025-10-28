@@ -77,6 +77,11 @@ app.use((req, res, next) => {
 app.use('/media', express.static(mediaDir))
 app.use(express.static(path.join(process.cwd(),'dist')))
 
+// Health check for hosting providers
+app.get('/health', (req, res) => {
+  res.json({ ok: true, uptime: process.uptime(), timestamp: Date.now() })
+})
+
 // API: list media files in the media folder with minimal metadata
 app.get('/api/media', async (req, res) => {
   try {
