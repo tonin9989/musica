@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+server/data/db.sqlite
+.DS_Store
+npm-debug.log
+.cache/
+.vscode/
+.idea/
+coverage/
+/.parcel-cache
+/.pnp
+/.pnp.js

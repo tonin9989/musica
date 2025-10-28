@@ -48,6 +48,20 @@ Observações para deploy
 - O servidor serve arquivos estáticos do diretório `dist` (após `npm run build`) e também expõe API em `/api/*`.
 - Coloque arquivos de áudio em `media/` (o servidor cria a pasta automaticamente) ou use o upload pela UI.
 
+Deploy na Netlify (frontend)
+---------------------------------
+1) Conecte este repositório no Netlify (site -> New site -> Import from Git -> GitHub).
+2) Em Site settings -> Build & deploy, configure:
+	- Build command: `npm run build`
+	- Publish directory: `dist`
+3) No painel do Site -> Environment -> Environment variables, adicione:
+	- `VITE_API_BASE` = `https://seu-backend.example.com` (URL do seu backend). O frontend usará essa variável para chamar a API.
+4) Caso seu backend esteja em outro host, garanta que o CORS do backend permita o domínio do Netlify (ou defina `CORS` apropriadamente).
+
+Netlify já usará `netlify.toml` para configurar o build e um redirect para SPA está definido (`/index.html`). Também incluí `public/_redirects` como fallback.
+
+Observação: por segurança e performance, remova `node_modules` do repositório (já adicionei `.gitignore`). O Netlify irá instalar dependências durante o build.
+
 Endpoints úteis
 - GET `/api/media` — lista arquivos em `/media` com metadados (title, artist, src, cover (data URL), duration).
 - POST `/upload` — aceita multipart/form-data (campo `files`) para salvar arquivos em `/media`.
