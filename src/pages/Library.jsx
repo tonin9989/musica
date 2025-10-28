@@ -135,30 +135,41 @@ export default function Library(){
 
   return (
     <div className="page library">
-      <h2>Biblioteca</h2>
-      <p>Faça upload de músicas aqui ou coloque arquivos na pasta <code>/media</code>.</p>
-
-      <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
-        <input ref={inputRef} onChange={onFileChange} type="file" multiple accept="audio/*" />
-        <button onClick={()=> inputRef.current && inputRef.current.click()}>Selecionar arquivos</button>
-        <button onClick={()=> fetchMedia()}>Atualizar lista</button>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <h2>Biblioteca</h2>
+          <p className="muted">Faça upload de músicas ou gerencie sua coleção. Clique em Play para ouvir aqui.</p>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <input style={{display:'none'}} ref={inputRef} onChange={onFileChange} type="file" multiple accept="audio/*" id="libFiles" />
+          <label htmlFor="libFiles"><button>Selecionar arquivos</button></label>
+          <button onClick={()=> fetchMedia()}>Atualizar</button>
+        </div>
       </div>
 
-      <ul className="track-list">
+      <div className="library-grid" style={{marginTop:16}}>
+        {list.length===0 && <div className="card">Nenhuma música encontrada</div>}
         {list.map((t,i)=> (
-          <li key={i}>
-            <img src={t.image || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="100%" height="100%" fill="%230b1220"/><text x="50%" y="50%" fill="%23fff" font-size="10" dominant-baseline="middle" text-anchor="middle">MUSIC</text></svg>'} alt="cover" />
-            <div className="meta">
-              <div className="title">{t.title}</div>
-              <div className="artist">{t.artist} {t.duration ? `• ${Math.floor(t.duration/60)}:${('0'+(t.duration%60)).slice(-2)}` : ''}</div>
+          <div key={i} className="track-card card animate-fade">
+            <div className="track-cover" style={{backgroundImage:`url(${t.image||'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="%230b1220"/></svg>'})`}} />
+            <div className="track-body">
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div className="title">{t.title}</div>
+                  <div className="artist">{t.artist}</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <div className="muted">{t.duration? `${Math.floor(t.duration/60)}:${('0'+(t.duration%60)).slice(-2)}` : ''}</div>
+                  <div style={{marginTop:8}}>
+                    <button onClick={()=>play(t)} className="plan-cta">Play</button>
+                    <button onClick={()=>addToPlaylist(t)} style={{marginLeft:8}}>Add</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="actions row-actions">
-              <button onClick={()=>play(t)}>Play</button>
-              <button onClick={()=>addToPlaylist(t)}>Add à playlist</button>
-            </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }

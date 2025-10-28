@@ -98,31 +98,42 @@ export default function Playlists(){
 
   return (
     <div className="page playlists">
-      <h2>Playlists</h2>
-      <div>
-        <input placeholder="Nome da playlist" value={name} onChange={e=>setName(e.target.value)} />
-        <button onClick={create}>Criar</button>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <h2>Playlists</h2>
+          <p className="muted">Crie, edite e reproduza suas playlists.</p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <input placeholder="Nome da playlist" value={name} onChange={e=>setName(e.target.value)} />
+          <button onClick={create}>Criar</button>
+        </div>
       </div>
 
       <div className="playlists-grid" style={{marginTop:12}}>
-        {playlists.length===0 && <p>Nenhuma playlist</p>}
+        {playlists.length===0 && <div className="card">Nenhuma playlist</div>}
         {playlists.map((p,i)=> (
-          <div key={p.id} className="playlist-item card" style={{marginBottom:12}}>
-            <div style={{flex:1}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <strong>{p.name}</strong>
-                <div>
-                  <button onClick={()=>playPlaylist(p)} style={{marginRight:8}}>Tocar</button>
-                  <button onClick={()=>openEdit(i)} style={{marginRight:8}}>Editar</button>
-                  <button onClick={()=>remove(p.id)}>Remover</button>
+          <div key={p.id} className="playlist-card card animate-fade">
+            <div className="playlist-header">
+              <div className="playlist-thumb" style={{backgroundImage:`url(${(p.tracks && p.tracks[0] && (p.tracks[0].image||p.tracks[0].cover)) || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%230b1220%22/></svg>'})`}} />
+              <div style={{flex:1,marginLeft:12}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <strong style={{fontSize:16}}>{p.name}</strong>
+                  <div>
+                    <button onClick={()=>playPlaylist(p)} className="plan-cta" style={{marginRight:8}}>Tocar</button>
+                    <button onClick={()=>openEdit(i)} style={{marginRight:8}}>Editar</button>
+                    <button onClick={()=>remove(p.id)}>Remover</button>
+                  </div>
                 </div>
+                <div className="muted" style={{marginTop:6}}>{(p.tracks && p.tracks.length) ? `${p.tracks.length} faixas` : 'Sem faixas'}</div>
               </div>
-              <div style={{marginTop:8}}>
-                {(!p.tracks || p.tracks.length===0) && <div className="muted">Sem faixas</div>}
-                {p.tracks && p.tracks.map((t,ti)=> (
-                  <div key={ti} className="track-row" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            </div>
+
+            {p.tracks && p.tracks.length>0 && (
+              <div className="playlist-tracks">
+                {p.tracks.map((t,ti)=> (
+                  <div key={ti} className="track-row">
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <img src={t.image||t.cover||'/media/default.png'} alt="c" style={{width:40,height:40,objectFit:'cover',borderRadius:6}} />
+                      <img src={t.image||t.cover||'/media/default.png'} alt="c" style={{width:48,height:48,objectFit:'cover',borderRadius:6}} />
                       <div>
                         <div>{t.title}</div>
                         <div style={{fontSize:12,color:'var(--muted)'}}>{t.artist}</div>
@@ -136,7 +147,8 @@ export default function Playlists(){
                   </div>
                 ))}
               </div>
-            </div>
+            )}
+
             {editing===i && (
               <div style={{marginTop:8}}>
                 <button onClick={()=>savePlaylist(playlists[i])}>Salvar alterações</button>

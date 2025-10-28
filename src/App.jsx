@@ -8,6 +8,7 @@ import Settings from './pages/Settings'
 import Auth from './pages/Auth'
 import Player from './components/Player'
 import logo from './logo.svg'
+import Reels from './pages/Reels'
 
 export default function App(){
   const [user, setUser] = useState(null)
@@ -62,6 +63,7 @@ export default function App(){
             <Route path="/" element={<Home/>} />
             <Route path="/library" element={<Library/>} />
             <Route path="/playlists" element={<Playlists/>} />
+            <Route path="/reels" element={<Reels/>} />
             <Route path="/plans" element={<Plans/>} />
             <Route path="/settings" element={<Settings/>} />
             <Route path="/auth" element={<Auth/>} />
