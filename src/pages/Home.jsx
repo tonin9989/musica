@@ -12,12 +12,24 @@ const sampleTracks = [
 ]
 
 function playTrack(t){
-  // set active playlist to this single-track and currentTrack for player component
-  const active = { index: 0, tracks: [t] }
-  localStorage.setItem('activePlaylist', JSON.stringify(active))
-  localStorage.setItem('currentTrack', JSON.stringify(t))
-  // dispatch change event for Player to pick up
-  window.dispatchEvent(new Event('trackChanged'))
+  try{
+    // create a minimal, safe track object for storage (avoid unexpected fields)
+    const safe = {
+      title: t.title || 'Untitled',
+      artist: t.artist || t.artist || '',
+    }
+    if(t.youtubeId) safe.youtubeId = t.youtubeId
+    else if(t.src) safe.src = t.src
+
+    const active = { name: 'Seleções', index: 0, tracks: [safe] }
+    localStorage.setItem('activePlaylist', JSON.stringify(active))
+    localStorage.setItem('currentTrack', JSON.stringify(safe))
+    // dispatch change event for Player to pick up
+    try{ window.dispatchEvent(new Event('trackChanged')) }catch(e){ /* ignore */ }
+  }catch(err){
+    console.error('playTrack error', err)
+    alert('Erro ao tentar reproduzir a faixa')
+  }
 }
 
 export default function Home(){
