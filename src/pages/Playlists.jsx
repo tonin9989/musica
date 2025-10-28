@@ -6,64 +6,67 @@ export default function Playlists(){
   const [editing, setEditing] = useState(null) // index
   const dropRef = useRef()
 
-  useEffect(()=>{
-    const raw = localStorage.getItem('playlists')
-    if(raw) setPlaylists(JSON.parse(raw))
-  },[])
-
-  function persist(pls){
-    setPlaylists(pls)
-    localStorage.setItem('playlists', JSON.stringify(pls))
+  async function load(){
+    try{
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/playlists', { headers: token ? { Authorization: 'Bearer '+token } : {} })
+      if(res.ok){
+        const data = await res.json()
+        setPlaylists(data)
+      }
+    }catch(err){ console.error(err) }
   }
 
-  function create(){
+  useEffect(()=>{ load() },[])
+
+  async function create(){
     if(!name) return
-    const p = [...playlists, {name, tracks:[]}]
-    persist(p)
-    setName('')
+    const token = localStorage.getItem('token')
+    try{
+      const res = await fetch('/api/playlists', { method:'POST', headers: {'Content-Type':'application/json', Authorization: token? 'Bearer '+token : ''}, body: JSON.stringify({ name, tracks: [] }) })
+      if(res.ok){ setName(''); await load() }
+      else { const b = await res.json(); alert(b.error||'Erro') }
+    }catch(err){ alert(err) }
+  }
+
+  async function remove(id){
+    if(!confirm('Remover playlist?')) return
+    try{
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/playlists/'+id, { method:'DELETE', headers: { Authorization: token? 'Bearer '+token : '' } })
+      if(res.ok) load()
+      else { const b=await res.json(); alert(b.error||'Erro') }
+    }catch(err){ console.error(err) }
   }
 
   function playPlaylist(p){
-    if(!p.tracks.length) return alert('Playlist vazia')
+    if(!p.tracks || !p.tracks.length) return alert('Playlist vazia')
     localStorage.setItem('activePlaylist', JSON.stringify({name:p.name, tracks:p.tracks, index:0}))
     localStorage.setItem('currentTrack', JSON.stringify(p.tracks[0]))
     window.dispatchEvent(new Event('trackChanged'))
   }
 
-  function openEdit(i){
-    setEditing(i)
+  function openEdit(i){ setEditing(i) }
+
+  function moveTrackLocal(plIndex, idx, dir){
+    const pls = [...playlists]
+    const arr = pls[plIndex].tracks || []
+    const to = dir==='up' ? idx-1 : idx+1
+    if(to<0 || to>=arr.length) return
+    const tmp = arr[to]
+    arr[to] = arr[idx]
+    arr[idx] = tmp
+    pls[plIndex].tracks = arr
+    setPlaylists(pls)
   }
 
-  function removePlaylist(i){
-    if(!confirm('Excluir playlist?')) return
-    const pls = [...playlists]
-    pls.splice(i,1)
-    persist(pls)
-    setEditing(null)
-  }
-
-  function renamePlaylist(i){
-    const newName = prompt('Novo nome', playlists[i].name)
-    if(!newName) return
-    const pls = [...playlists]
-    pls[i].name = newName
-    persist(pls)
-  }
-
-  function removeTrack(plIndex, tIndex){
-    const pls = [...playlists]
-    pls[plIndex].tracks.splice(tIndex,1)
-    persist(pls)
-  }
-
-  function moveTrack(plIndex, tIndex, dir){
-    const pls = [...playlists]
-    const arr = pls[plIndex].tracks
-    const newIndex = tIndex + dir
-    if(newIndex < 0 || newIndex >= arr.length) return
-    const item = arr.splice(tIndex,1)[0]
-    arr.splice(newIndex,0,item)
-    persist(pls)
+  async function savePlaylist(pl){
+    try{
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/playlists/'+pl.id, { method:'PUT', headers: {'Content-Type':'application/json', Authorization: token? 'Bearer '+token : ''}, body: JSON.stringify(pl) })
+      if(res.ok) load()
+      else { const b=await res.json(); alert(b.error||'Erro') }
+    }catch(err){ console.error(err) }
   }
 
   async function handleFiles(files){
@@ -72,19 +75,24 @@ export default function Playlists(){
     const res = await fetch('/upload', {method:'POST', body:fd})
     const json = await res.json()
     alert(json.message || 'Upload completo')
+    await load()
   }
 
   useEffect(()=>{
     const el = dropRef.current
     function prevent(e){ e.preventDefault(); e.stopPropagation() }
     function onDrop(e){ prevent(e); const files = Array.from(e.dataTransfer.files); handleFiles(files) }
-    el.addEventListener('dragenter', prevent)
-    el.addEventListener('dragover', prevent)
-    el.addEventListener('drop', onDrop)
+    if(el){
+      el.addEventListener('dragenter', prevent)
+      el.addEventListener('dragover', prevent)
+      el.addEventListener('drop', onDrop)
+    }
     return ()=>{
-      el.removeEventListener('dragenter', prevent)
-      el.removeEventListener('dragover', prevent)
-      el.removeEventListener('drop', onDrop)
+      if(el){
+        el.removeEventListener('dragenter', prevent)
+        el.removeEventListener('dragover', prevent)
+        el.removeEventListener('drop', onDrop)
+      }
     }
   },[])
 
@@ -96,49 +104,49 @@ export default function Playlists(){
         <button onClick={create}>Criar</button>
       </div>
 
-      <div className="playlists-grid">
-        <ul>
-          {playlists.map((p,i)=> (
-            <li key={i} className="playlist-item">
-              <div>
-                <strong>{p.name}</strong> ({p.tracks.length} faixas)
+      <div className="playlists-grid" style={{marginTop:12}}>
+        {playlists.length===0 && <p>Nenhuma playlist</p>}
+        {playlists.map((p,i)=> (
+          <div key={p.id} className="playlist-item card" style={{marginBottom:12}}>
+            <div style={{flex:1}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <strong>{p.name}</strong>
+                <div>
+                  <button onClick={()=>playPlaylist(p)} style={{marginRight:8}}>Tocar</button>
+                  <button onClick={()=>openEdit(i)} style={{marginRight:8}}>Editar</button>
+                  <button onClick={()=>remove(p.id)}>Remover</button>
+                </div>
               </div>
-              <div className="playlist-actions">
-                <button onClick={()=>playPlaylist(p)}>Tocar</button>
-                <button onClick={()=>openEdit(i)}>Editar</button>
-                <button onClick={()=>renamePlaylist(i)}>Renomear</button>
-                <button onClick={()=>removePlaylist(i)}>Excluir</button>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <div className="editor">
-          {editing===null ? <div>Selecione uma playlist para editar</div> : (
-            <div>
-              <h3>Editando: {playlists[editing].name}</h3>
-              <ul>
-                {playlists[editing].tracks.map((t,ti)=> (
-                  <li key={ti} className="track-row">
-                    <img src={t.image} alt="capa" />
-                    <div className="meta">
-                      <div className="title">{t.title}</div>
-                      <div className="artist">{t.artist}</div>
+              <div style={{marginTop:8}}>
+                {(!p.tracks || p.tracks.length===0) && <div className="muted">Sem faixas</div>}
+                {p.tracks && p.tracks.map((t,ti)=> (
+                  <div key={ti} className="track-row" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <img src={t.image||t.cover||'/media/default.png'} alt="c" style={{width:40,height:40,objectFit:'cover',borderRadius:6}} />
+                      <div>
+                        <div>{t.title}</div>
+                        <div style={{fontSize:12,color:'var(--muted)'}}>{t.artist}</div>
+                      </div>
                     </div>
-                    <div className="row-actions">
-                      <button onClick={()=>moveTrack(editing,ti,-1)}>↑</button>
-                      <button onClick={()=>moveTrack(editing,ti,1)}>↓</button>
-                      <button onClick={()=>removeTrack(editing,ti)}>Remover</button>
+                    <div>
+                      <button onClick={()=>{ const pls=[...playlists]; pls[i].tracks.splice(ti,1); setPlaylists(pls);}}>Remover</button>
+                      <button onClick={()=>moveTrackLocal(i, ti, 'up')}>↑</button>
+                      <button onClick={()=>moveTrackLocal(i, ti, 'down')}>↓</button>
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
-          )}
-        </div>
+            {editing===i && (
+              <div style={{marginTop:8}}>
+                <button onClick={()=>savePlaylist(playlists[i])}>Salvar alterações</button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      <h3>Upload de arquivos (arraste para cá)</h3>
+      <h3 style={{marginTop:16}}>Upload de arquivos (arraste para cá)</h3>
       <div ref={dropRef} className="dropzone" style={{border:'2px dashed rgba(255,255,255,0.06)',padding:20,borderRadius:8}}>Arraste arquivos aqui para enviar ao servidor</div>
       <p>Ou use o botão abaixo</p>
       <form id="uploadForm">
@@ -149,6 +157,7 @@ export default function Playlists(){
           const res = await fetch('/upload', {method:'POST', body:fd})
           const json = await res.json()
           alert(json.message || 'Upload completo')
+          await load()
         }}>Enviar</button>
       </form>
     </div>
