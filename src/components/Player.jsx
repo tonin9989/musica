@@ -220,10 +220,10 @@ export default function Player(){
           </div>
         )}
       </div>
-      {/* YouTube iframe (shown when a youtubeId is present) */}
+      {/* YouTube player container (created by IFrame API) */}
       {track && track.youtubeId ? (
         <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',padding:'8px 12px'}}>
-          <iframe title="youtube-player" src={youtubeSrc} width="320" height="180" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen style={{borderRadius:8}} />
+          <div ref={ytContainerRef} style={{borderRadius:8,overflow:'hidden'}} />
         </div>
       ) : null}
       <div className="player-controls">
