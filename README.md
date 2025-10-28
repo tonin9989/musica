@@ -15,87 +15,134 @@ Funcionalidades principais implementadas
 Como rodar localmente
 
 1. Instale dependências (no Windows PowerShell):
+# ProSpotify - Clone
+
+Projeto scaffold de um player estilo Spotify, pronto para customizar e fazer deploy.
+
+Visão geral
+-----------
+Aplicação React (Vite) com um backend Express mínimo que expõe APIs para autenticação, gestão de playlists e upload/serving de arquivos de áudio. O frontend pode reproduzir arquivos locais e também embutir vídeos do YouTube (Player usa a IFrame API para vídeos).
+
+Principais funcionalidades
+- Upload de arquivos para a pasta `/media` via endpoint `/upload`.
+- Listagem de mídias com leitura de metadados (ID3) via `/api/media`.
+- Autenticação simples: `/api/register` e `/api/login` retornam token JWT. Tokens protegem rotas de playlists.
+- Playlists persistidas em `server/data/playlists.json` (ou SQLite quando disponível).
+- Player com suporte a arquivos locais e vídeos do YouTube (IFrame API) com auto-advance.
+
+Como rodar localmente (Windows PowerShell)
+----------------------------------------
+1) Instale dependências (se ainda não):
 
 ```powershell
-cd 'c:\Users\antonio_leoni\Desktop\Nova pasta\musica'
+cd 'c:\Users\antonio_leoni\Desktop\Nova pasta (2)\musica'
 npm install --legacy-peer-deps
 ```
 
-2. Rodar em desenvolvimento (frontend e backend separados):
+2) Rodar backend (API + serve estático `dist` após build):
 
 ```powershell
-# terminal 1
-cd 'c:\Users\antonio_leoni\Desktop\Nova pasta\musica'
-npm run dev
-
-# terminal 2
-cd 'c:\Users\antonio_leoni\Desktop\Nova pasta\musica'
+# em um terminal
+cd 'c:\Users\antonio_leoni\Desktop\Nova pasta (2)\musica'
 node server/index.js
+# servidor por padrão no http://localhost:3000
 ```
 
-3. Para servir a versão de produção (build Vite + servidor Express):
+3) Rodar frontend em dev (Vite):
 
 ```powershell
-cd 'c:\Users\antonio_leoni\Desktop\Nova pasta\musica'
-# opcional: set JWT_SECRET before start
-$env:JWT_SECRET = 'minha_chave_secreta'
+# em outro terminal
+cd 'c:\Users\antonio_leoni\Desktop\Nova pasta (2)\musica'
+npm run dev
+# Vite mostrará a URL (ex.: http://localhost:5173)
+```
+
+4) Testar fluxo básico:
+- Registrar/login em `/auth` (retorna token)
+- Ir para `/plans` e assinar um plano (endpoint `/api/subscribe` salvo no backend)
+- Na página inicial, testar as faixas de demonstração (YouTube embutido)
+
+Build para produção
+--------------------
+O frontend usa Vite. O comando de build já existe em `package.json`:
+
+```powershell
 npm run build
+```
+
+Isso gera a pasta `dist` com os arquivos estáticos. O backend (`server/index.js`) serve `dist` em produção, então o fluxo de deploy clássico para um servidor Node.js é:
+
+```powershell
+# build
+npm run build
+# definir variável JWT_SECRET no ambiente
+$env:JWT_SECRET = 'uma_chave_secreta'
+# start
 npm start
 ```
 
-Observações para deploy
-- Defina a variável de ambiente `JWT_SECRET` em produção para uma chave segura.
-- O servidor serve arquivos estáticos do diretório `dist` (após `npm run build`) e também expõe API em `/api/*`.
-- Coloque arquivos de áudio em `media/` (o servidor cria a pasta automaticamente) ou use o upload pela UI.
+Deploy do frontend no Netlify (recomendado para frontend)
+--------------------------------------------------------
+Recomendo hospedar apenas o frontend no Netlify e o backend em outro serviço compatível com Node (Render, Fly.io, DigitalOcean App Platform, VPS, etc.). Netlify não executa um servidor Node persistente exceto via Functions (que exigiriam reescrever seu backend como funções serverless).
 
-Deploy na Netlify (frontend)
----------------------------------
-1) Conecte este repositório no Netlify (site -> New site -> Import from Git -> GitHub).
-2) Em Site settings -> Build & deploy, configure:
-	- Build command: `npm run build`
-	- Publish directory: `dist`
-3) No painel do Site -> Environment -> Environment variables, adicione:
-	- `VITE_API_BASE` = `https://seu-backend.example.com` (URL do seu backend). O frontend usará essa variável para chamar a API.
-4) Caso seu backend esteja em outro host, garanta que o CORS do backend permita o domínio do Netlify (ou defina `CORS` apropriadamente).
+Passos rápidos para Netlify:
+1) Conecte o repositório no Netlify (Sites -> New site -> Import from Git).
+2) Na seção Build & deploy, configure:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3) Em Site settings -> Environment, adicione `VITE_API_BASE` apontando para a URL do seu backend (ex.: `https://api.exemplo.com`). Ex.:
+   - VITE_API_BASE = https://seu-backend.example.com
+4) O `netlify.toml` já presente no repositório define o publish `dist` e um redirect para SPA. Netlify fará o build e publicará o `dist`.
 
-Netlify já usará `netlify.toml` para configurar o build e um redirect para SPA está definido (`/index.html`). Também incluí `public/_redirects` como fallback.
+Hospedar o backend (opções)
+--------------------------
+Você precisa de um servidor Node para rodar `server/index.js` se quiser a API disponível publicamente. Opções simples:
+- Render.com — fácil deploy a partir do GitHub; suporta variáveis de ambiente (coloque `JWT_SECRET`).
+- Fly.io / DigitalOcean App Platform — ambos suportam Node.js e volumes (se quiser persistir `media/`).
+- VPS / Docker — empacote com Docker e rode em um host com volume para `media/`.
 
-Observação: por segurança e performance, remova `node_modules` do repositório (já adicionei `.gitignore`). O Netlify irá instalar dependências durante o build.
+Variáveis de ambiente importantes (no servidor backend)
+- JWT_SECRET — string secreta para assinar tokens JWT. Ex: `uma_chave_secreta`. DEFINA EM PRODUÇÃO.
 
-Endpoints úteis
-- GET `/api/media` — lista arquivos em `/media` com metadados (title, artist, src, cover (data URL), duration).
-- POST `/upload` — aceita multipart/form-data (campo `files`) para salvar arquivos em `/media`.
-- POST `/api/register` — body {email, pass} — cria usuário e retorna token.
-- POST `/api/login` — body {email, pass} — retorna token.
-- GET/POST/PUT/DELETE `/api/playlists` — playlists CRUD (autenticado para criar/editar/deletar).
+Configurar o frontend para usar o backend
+---------------------------------------
+No Netlify (ou localmente com `.env`), defina `VITE_API_BASE` para a URL pública do backend. O frontend usa essa variável para construir URLs da API.
 
-Próximos passos sugeridos
-- Melhorar extração das capas e thumbnails no backend (gerar imagens menores).
-- Adicionar paginação/busca no frontend para grandes bibliotecas.
-- Integrar um banco leve (SQLite) para escalabilidade em vez de JSON em arquivo.
-
-Se quiser, continuo e implemento uma versão com thumbnails otimizadas e uma tela de playlists completa com CRUD no frontend.
-
-Deploy (Docker)
----------------
-
-Você pode empacotar a aplicação com Docker. Exemplo:
+Exemplo local (PowerShell) para rodar com VITE_API_BASE apontando para um backend local:
 
 ```powershell
-cd 'c:\Users\antonio_leoni\Desktop\Nova pasta\musica'
-docker build -t pro-spotify-clone:latest .
-docker run -e JWT_SECRET='uma_chave_segura' -p 3000:3000 --name pro-spotify pro-spotify-clone:latest
+$env:VITE_API_BASE = 'http://localhost:3000'
+npm run dev
 ```
 
-Depois abra `http://localhost:3000`.
+Endpoints úteis
+- GET `/api/media` — lista arquivos em `/media` com metadados (title, artist, src, cover, duration).
+- POST `/upload` — aceita multipart/form-data (campo `files`) para enviar arquivos.
+- POST `/api/register` — body {email, pass} — cria usuário e retorna token.
+- POST `/api/login` — body {email, pass} — retorna token.
+- POST `/api/subscribe` — body {plan} — protege com JWT, salva plano (JSON fallback) e retorna usuário atualizado.
 
-CI (GitHub Actions)
----------------------
+Smoke test (básico)
+-------------------
+Depois de instalar dependências, você pode executar o script de smoke-test incluído:
 
-Adicione o workflow em `.github/workflows/ci.yml`. Ele faz build e executa um pequeno smoke-test (endpoints `/api/media` e `/api/playlists`). Isso ajuda a manter o repositório pronto para deploy automático.
+```powershell
+npm run smoke
+```
 
-Checklist pré-deploy
-- Definir `JWT_SECRET` em variáveis de ambiente do servidor.
-- Executar `npm audit` e corrigir vulnerabilidades críticas antes do deploy.
-- Preparar storage persistente para a pasta `media/` no servidor de produção (mount de volume ou bucket).
+Isso executa um pequeno script (`scripts/smoke-test.js`) que checa endpoints básicos. Se falhar, verifique logs do backend.
+
+Dicas finais antes do deploy
+----------------------------
+- Garanta que `JWT_SECRET` esteja configurado no ambiente do backend.
+- Prepare armazenamento persistente para `media/` (mount de volume ou bucket) para que uploads não se percam entre reinícios.
+- Se pretende apenas hospedar o frontend no Netlify, configure `VITE_API_BASE` para apontar ao backend e verifique CORS no backend (o servidor já permite CORS por padrão).
+- Para HMR/local development do frontend e backend ao mesmo tempo, rode `npm run dev` (Vite) e `node server/index.js` em terminais separados.
+
+Se quiser, eu posso:
+- Rodar o `npm run build` aqui e verificar se o `dist` é gerado sem erros; ou
+- Gerar um pequeno passo a passo com prints/links especificamente para conectar no Netlify (incluindo onde adicionar `VITE_API_BASE` no painel); ou
+- Ajudar a reescrever endpoints do backend como Netlify Functions (se preferir ter backend serverless na mesma hospedagem).
+
+Escolha o próximo passo que prefere e eu executo (por exemplo: executar build e smoke-test agora). 
 

@@ -305,6 +305,28 @@ app.delete('/api/playlists/:id', authMiddleware, async (req,res)=>{
   }
 })
 
+// Subscribe to a plan (simple mock persistence in JSON users file)
+app.post('/api/subscribe', express.json(), authMiddleware, async (req, res) => {
+  const { plan } = req.body || {}
+  if(!plan) return res.status(400).json({ error: 'plan required' })
+  try{
+    if(useDb){
+      // SQLite persistence for user plans not implemented in this simple example.
+      // For now, return success but do not persist in DB.
+      return res.json({ ok: true, plan })
+    }
+    const users = readJson(usersFile)
+    const idx = users.findIndex(u => u.id === req.user.id)
+    if(idx === -1) return res.status(404).json({ error: 'user not found' })
+    users[idx].plan = plan
+    writeJson(usersFile, users)
+    const safeUser = { id: users[idx].id, email: users[idx].email, plan: users[idx].plan }
+    res.json({ ok: true, user: safeUser })
+  }catch(err){
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 app.post('/upload', upload.array('files'), (req,res)=>{
   const results = []
   Promise.all(req.files.map(async (f)=>{
