@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Library from './pages/Library'
 import Playlists from './pages/Playlists'
@@ -13,11 +13,17 @@ import Reels from './pages/Reels'
 export default function App(){
   const [user, setUser] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
 
   useEffect(()=>{
     const raw = localStorage.getItem('user')
     if(raw) setUser(JSON.parse(raw))
   },[])
+
+  // Close sidebar on route change (better UX on mobile)
+  useEffect(()=>{
+    setSidebarOpen(false)
+  }, [location.pathname])
 
   function logout(){
     localStorage.removeItem('user')
@@ -70,6 +76,9 @@ export default function App(){
           </Routes>
         </main>
       </div>
+      {sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true" />
+      )}
       <Player />
     </div>
   )

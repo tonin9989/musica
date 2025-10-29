@@ -158,8 +158,8 @@ export default function Player(){
     if(!ytContainerRef.current) return
     try{
       ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
-        height: '180',
-        width: '320',
+        height: '100%',
+        width: '100%',
         videoId: videoId,
         playerVars: { rel: 0, controls: 1, autoplay: autoplay ? 1 : 0 },
         events: {
@@ -223,7 +223,9 @@ export default function Player(){
       {/* YouTube player container (created by IFrame API) */}
       {track && track.youtubeId ? (
         <div style={{flex:1,display:'flex',justifyContent:'center',alignItems:'center',padding:'8px 12px'}}>
-          <div ref={ytContainerRef} style={{borderRadius:8,overflow:'hidden'}} />
+          <div className="yt-wrapper">
+            <div ref={ytContainerRef} className="yt-frame" />
+          </div>
         </div>
       ) : null}
       <div className="player-controls">
@@ -257,7 +259,7 @@ export default function Player(){
             }
           }
         }} aria-label="Próxima"><FaForward /></button>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginLeft:12}}>
+        <div className="volume" style={{display:'flex',alignItems:'center',gap:8,marginLeft:12, flex:0}}>
           <FaVolumeUp style={{color:'var(--muted)'}} />
           <input type="range" min="0" max="1" step="0.01" value={volume} onChange={onVolumeChange} />
         </div>
