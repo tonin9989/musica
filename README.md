@@ -1,12 +1,48 @@
-# ProSpotify - Clone
+# ProSpotify - Clone Melhorado 🎵
 
-Projeto scaffold de um player estilo Spotify, pronto para customizar e fazer deploy.
+Projeto completo de player de música estilo Spotify com backend Express, sistema de playlists, autenticação JWT e integração PIX para assinaturas.
 
-# ProSpotify - Clone
+## ✨ Melhorias Recentes
 
-Projeto mínimo de player de música (estilo Spotify) com backend Express para servir mídias, upload, autenticação simples (JWT) e playlists persistidas em arquivo JSON.
+### Interface Mobile Aprimorada
+- ✅ Logo totalmente visível em dispositivos móveis
+- ✅ Sidebar responsiva com backdrop e animações suaves
+- ✅ Menu hambúrguer funcional que fecha ao clicar nas opções ou fora dele
+- ✅ Layout otimizado para telas pequenas
 
-Funcionalidades principais implementadas
+### Sistema de Playlists Avançado
+- ✅ Interface intuitiva para adicionar músicas às playlists
+- ✅ Modal de seleção de músicas disponíveis no site
+- ✅ Visualização melhorada das tracks com imagens
+- ✅ Reorganização de músicas (mover para cima/baixo)
+- ✅ Remoção individual de faixas
+
+### Funcionalidade de Planos Completa
+- ✅ Integração PIX funcional com QR Code
+- ✅ Sistema de polling para detectar pagamentos
+- ✅ Botão de simulação de pagamento para testes
+- ✅ Atualização automática do plano do usuário após pagamento
+- ✅ Persistência em JSON ou SQLite
+
+### Biblioteca Musical Expandida
+- ✅ 12+ músicas funcionais do YouTube
+- ✅ Músicas brasileiras e internacionais
+- ✅ Cards visuais com capas das músicas
+- ✅ Integração direta com player do YouTube
+- ✅ Sistema de adicionar à playlist melhorado
+
+### Animações e Experiência do Usuário
+- ✅ Transições suaves em todos os elementos
+- ✅ Efeitos hover em cards e botões
+- ✅ Animações de entrada (fade, slide, scale)
+- ✅ Player com animação de slide-up
+- ✅ Cards com efeito de elevação no hover
+- ✅ Inputs com feedback visual (focus/blur)
+- ✅ Modal com backdrop animado
+- ✅ Efeitos shimmer para loading
+- ✅ Gradient text para destaques
+
+## 🚀 Funcionalidades Principais
 - Upload de arquivos para a pasta `/media` via endpoint `/upload`.
 - Listagem de mídias com leitura de metadados (ID3): título, artista, duração e capa (quando disponível) via `/api/media`.
 - Autenticação simples: `/api/register` e `/api/login` retornam um token JWT. Tokens são usados para proteger rotas de playlists.

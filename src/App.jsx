@@ -33,24 +33,27 @@ export default function App(){
   }
   return (
     <div className="app">
+      {sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true" />
+      )}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="logo">
           <img src={logo} alt="logo" />
           <span>ProSpotify</span>
         </div>
         <nav>
-          <Link to="/">Home</Link>
-          <Link to="/library">Biblioteca</Link>
-          <Link to="/playlists">Playlists</Link>
-          <Link to="/plans">Planos</Link>
-          <Link to="/settings">Config</Link>
+          <Link to="/" onClick={()=>setSidebarOpen(false)}>Home</Link>
+          <Link to="/library" onClick={()=>setSidebarOpen(false)}>Biblioteca</Link>
+          <Link to="/playlists" onClick={()=>setSidebarOpen(false)}>Playlists</Link>
+          <Link to="/plans" onClick={()=>setSidebarOpen(false)}>Planos</Link>
+          <Link to="/settings" onClick={()=>setSidebarOpen(false)}>Config</Link>
           {user ? (
             <>
               <div style={{padding:'8px 0',color:'var(--muted)'}}>Olá, {user.email}</div>
               <a style={{cursor:'pointer',color:'var(--accent)'}} onClick={logout}>Sair</a>
             </>
           ) : (
-            <Link to="/auth">Entrar</Link>
+            <Link to="/auth" onClick={()=>setSidebarOpen(false)}>Entrar</Link>
           )}
         </nav>
       </aside>
@@ -62,7 +65,7 @@ export default function App(){
               <input placeholder="Pesquisar músicas, artistas ou playlists..." />
             </div>
           </div>
-          <div className="user">Plano: <strong>Free</strong></div>
+          <div className="user">Plano: <strong>{user?.plan || 'Free'}</strong></div>
         </header>
         <main className="main">
           <Routes>
@@ -76,9 +79,6 @@ export default function App(){
           </Routes>
         </main>
       </div>
-      {sidebarOpen && (
-        <div className="sidebar-backdrop" onClick={()=>setSidebarOpen(false)} aria-hidden="true" />
-      )}
       <Player />
     </div>
   )

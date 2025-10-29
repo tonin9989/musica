@@ -58,44 +58,46 @@ export default function Library(){
   }
 
   async function addToPlaylist(item){
-    const name = prompt('Escolha a playlist (nome exato):')
-    if(!name) return
-    // try server playlists first
-    const token = localStorage.getItem('token')
-    try{
-      const res = await fetch('/api/playlists', { headers: token ? { Authorization: 'Bearer '+token } : {} })
-      if(res.ok){
-        const pls = await res.json()
-        const idx = pls.findIndex(p=>p.name===name)
-        if(idx===-1){
-          if(!token){ alert('Playlist não encontrada localmente e você não está autenticado'); return }
-          // create a new playlist on server
-          const create = await fetch('/api/playlists', { method:'POST', headers: {'Content-Type':'application/json', Authorization: 'Bearer '+token}, body: JSON.stringify({ name, tracks: [item] }) })
-          if(create.ok){ alert('Playlist criada e faixa adicionada'); fetchPlaylists(); return }
-          alert('Erro criando playlist')
-          return
-        }
-        // add to existing server playlist
-        const pl = pls[idx]
-        pl.tracks = pl.tracks || []
-        pl.tracks.push(item)
-        const upd = await fetch('/api/playlists/'+pl.id, { method:'PUT', headers: {'Content-Type':'application/json', Authorization: 'Bearer '+token}, body: JSON.stringify(pl) })
-        if(upd.ok){ alert('Adicionado à playlist') ; fetchPlaylists(); return }
-        alert('Erro ao atualizar playlist')
-        return
-      }
-    }catch(err){ }
-
-    // fallback localStorage playlists
-    const pls = JSON.parse(localStorage.getItem('playlists')||'[]')
-    const idx = pls.findIndex(p=>p.name===name)
-    if(idx===-1){
-      alert('Playlist não encontrada (sem conexão)')
+    const pls = playlists
+    if(!pls || pls.length === 0){
+      alert('Você não tem playlists. Crie uma primeiro!')
       return
     }
-    pls[idx].tracks.push(item)
-    localStorage.setItem('playlists', JSON.stringify(pls))
-    alert('Adicionado à playlist (local)')
+    
+    // Show selection modal
+    const names = pls.map((p,i) => `${i+1}. ${p.name}`).join('\n')
+    const choice = prompt(`Escolha uma playlist (digite o número):\n${names}`)
+    if(!choice) return
+    
+    const idx = parseInt(choice) - 1
+    if(idx < 0 || idx >= pls.length){
+      alert('Playlist inválida')
+      return
+    }
+
+    const token = localStorage.getItem('token')
+    try{
+      const pl = pls[idx]
+      pl.tracks = pl.tracks || []
+      
+      // Check if already exists
+      const exists = pl.tracks.find(t => (t.src && t.src === item.src) || (t.youtubeId && t.youtubeId === item.youtubeId))
+      if(exists){
+        alert('Esta música já está na playlist!')
+        return
+      }
+      
+      pl.tracks.push(item)
+      const upd = await fetch('/api/playlists/'+pl.id, { method:'PUT', headers: {'Content-Type':'application/json', Authorization: 'Bearer '+token}, body: JSON.stringify(pl) })
+      if(upd.ok){ 
+        alert(`Adicionado à playlist "${pl.name}"!`)
+        await fetchPlaylists()
+        return
+      }
+      alert('Erro ao atualizar playlist')
+    }catch(err){ 
+      alert('Erro: ' + err)
+    }
   }
 
   async function fetchPlaylists(){

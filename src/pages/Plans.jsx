@@ -79,6 +79,23 @@ export default function Plans(){
     }, 2000)
   }
 
+  async function simulatePayment(chargeId){
+    try{
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/simulate-pay', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({chargeId})})
+      if(res.ok){
+        const body = await res.json()
+        alert('Pagamento simulado com sucesso!')
+        // the polling should detect the change
+      } else {
+        const err = await res.json()
+        alert('Erro: ' + (err.error || 'Desconhecido'))
+      }
+    }catch(err){
+      alert('Erro ao simular: ' + err)
+    }
+  }
+
   const plans = [
     { id: 'free', name: 'Free', price: 'Grátis', features: ['Qualidade padrão', 'Anúncios', 'Acesso limitado'] },
     { id: 'premium', name: 'Premium', price: 'R$ 19,90/mês', features: ['Sem anúncios', 'Downloads', 'Alta qualidade'] },
@@ -120,6 +137,11 @@ export default function Plans(){
                 <div>
                   {currentCharge.status === 'paid' ? <div className="qr-paid">Pagamento recebido — Obrigado!</div> : <div>Escaneie com seu app bancário para pagar R$ {Number(currentCharge.amount).toFixed(2)}</div>}
                   <div style={{marginTop:8,fontSize:12,color:'var(--muted)'}}>Cobrança: <code style={{color:'var(--muted)'}}>{currentCharge.id}</code></div>
+                  {currentCharge.status !== 'paid' && (
+                    <div style={{marginTop:12}}>
+                      <button onClick={()=>simulatePayment(currentCharge.id)} style={{fontSize:12}}>Simular Pagamento (teste)</button>
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
