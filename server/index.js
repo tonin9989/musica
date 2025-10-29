@@ -25,6 +25,8 @@ const usersFile = path.join(dataDir, 'users.json')
 // ensure data files exist
 if(!fs.existsSync(playlistsFile)) fs.writeFileSync(playlistsFile, '[]')
 if(!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]')
+const chargesFile = path.join(dataDir, 'charges.json')
+if(!fs.existsSync(chargesFile)) fs.writeFileSync(chargesFile, '[]')
 
 const thumbsDir = path.join(mediaDir, 'thumbnails')
 fs.mkdirSync(thumbsDir, { recursive: true })
@@ -47,6 +49,7 @@ try{
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret'
+const PIX_KEY = process.env.PIX_KEY || 'CHAVE_PIX_PLACEHOLDER'
 
 function readJson(file){
   try{ return JSON.parse(fs.readFileSync(file,'utf8')||'[]') }catch(e){ return [] }
@@ -54,6 +57,18 @@ function readJson(file){
 
 function writeJson(file, data){
   fs.writeFileSync(file, JSON.stringify(data, null, 2))
+}
+
+function readCharges(){
+  try{ return JSON.parse(fs.readFileSync(chargesFile,'utf8')||'[]') }catch(e){ return [] }
+}
+
+function writeCharges(ch){
+  writeJson(chargesFile, ch)
+}
+
+function generateChargeId(){
+  return 'ch_' + Date.now() + Math.floor(Math.random()*9000+1000)
 }
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -330,6 +345,136 @@ app.post('/api/subscribe', express.json(), authMiddleware, async (req, res) => {
   }catch(err){
     res.status(500).json({ error: String(err) })
   }
+})
+
+// Create a PIX charge (simulated or via PSP adapter)
+import { createPixCharge as interCreate, verifyWebhook as interVerify } from './lib/bancoInter.js'
+
+app.post('/api/create-charge', express.json(), async (req, res) => {
+  const token = (req.headers.authorization||'').replace('Bearer ','')
+  // lightweight auth check (reuse existing jwt logic)
+  try{
+    if(!token) return res.status(401).json({ error: 'missing token' })
+    const payload = jwt.verify(token, JWT_SECRET)
+    req.user = payload
+  }catch(err){ return res.status(401).json({ error: 'invalid token' }) }
+
+  const { plan, amount } = req.body || {}
+  if(!plan) return res.status(400).json({ error: 'plan required' })
+  const prices = { premium: 19.9, family: 29.9 }
+  const value = typeof amount === 'number' ? amount : (prices[plan] || 0)
+
+  // if provider is Banco Inter, delegate
+  const provider = process.env.PSP_PROVIDER || ''
+  let pixPayload = null
+  let providerChargeId = null
+  try{
+    if(provider === 'banco_inter'){
+      const created = await interCreate({ amount: value, reference: req.user.id, description: `Plan ${plan}` })
+      providerChargeId = created.chargeId
+      pixPayload = created.pixPayload
+    } else {
+      // fallback simulated payload
+      pixPayload = `PIX|ch:${Date.now()}|key:${PIX_KEY}|amount:${value}`
+    }
+  }catch(err){
+    return res.status(500).json({ error: String(err) })
+  }
+
+  const charges = readCharges()
+  const charge = {
+    id: generateChargeId(),
+    providerChargeId: providerChargeId || null,
+    provider: provider || 'simulated',
+    userId: req.user.id,
+    plan,
+    amount: value,
+    status: 'pending',
+    createdAt: Date.now(),
+    pixPayload
+  }
+  charges.push(charge)
+  writeCharges(charges)
+  res.json({ charge })
+})
+
+// Get charge status
+app.get('/api/charges/:id', authMiddleware, (req, res) => {
+  const id = req.params.id
+  const charges = readCharges()
+  const ch = charges.find(c=>c.id===id)
+  if(!ch) return res.status(404).json({ error: 'not found' })
+  if(ch.userId !== req.user.id) return res.status(403).json({ error: 'forbidden' })
+  res.json({ charge: ch })
+})
+
+// Webhook endpoint for PSP to notify payment (secured by an optional secret header)
+app.post('/api/webhook/pix', express.json(), (req, res) => {
+  const provider = process.env.PSP_PROVIDER || ''
+  // If provider is banco_inter, use its verification
+  if(provider === 'banco_inter'){
+    const v = interVerify(req.body, req.headers)
+    if(!v.valid) return res.status(401).json({ error: 'invalid webhook' })
+    const chargeId = v.chargeId
+    const status = v.status
+    if(!chargeId) return res.status(400).json({ error: 'chargeId required' })
+    const charges = readCharges()
+    const idx = charges.findIndex(c=>c.providerChargeId===chargeId || c.id===chargeId)
+    if(idx===-1) return res.status(404).json({ error: 'not found' })
+    charges[idx].status = status || 'paid'
+    charges[idx].paidAt = Date.now()
+    writeCharges(charges)
+    try{
+      const users = readJson(usersFile)
+      const uidx = users.findIndex(u=>u.id===charges[idx].userId)
+      if(uidx!==-1 && charges[idx].status === 'paid'){
+        users[uidx].plan = charges[idx].plan
+        writeJson(usersFile, users)
+      }
+    }catch(e){ }
+    return res.json({ ok: true })
+  }
+
+  // fallback: use webhook secret header if set
+  const secret = req.headers['x-webhook-secret'] || ''
+  const expected = process.env.WEBHOOK_SECRET || ''
+  if(expected && secret !== expected) return res.status(401).json({ error: 'invalid webhook secret' })
+  const { chargeId, status } = req.body || {}
+  if(!chargeId) return res.status(400).json({ error: 'chargeId required' })
+  const charges = readCharges()
+  const idx = charges.findIndex(c=>c.id===chargeId)
+  if(idx===-1) return res.status(404).json({ error: 'not found' })
+  charges[idx].status = status || 'paid'
+  charges[idx].paidAt = Date.now()
+  writeCharges(charges)
+  try{
+    const users = readJson(usersFile)
+    const uidx = users.findIndex(u=>u.id===charges[idx].userId)
+    if(uidx!==-1 && charges[idx].status === 'paid'){
+      users[uidx].plan = charges[idx].plan
+      writeJson(usersFile, users)
+    }
+  }catch(e){ }
+  res.json({ ok: true })
+})
+
+// Simulate a payment (for local testing) - marks a charge as paid and triggers internal webhook behaviour
+app.post('/api/simulate-pay', express.json(), authMiddleware, (req, res) => {
+  const { chargeId } = req.body || {}
+  if(!chargeId) return res.status(400).json({ error: 'chargeId required' })
+  const charges = readCharges()
+  const idx = charges.findIndex(c=>c.id===chargeId && c.userId===req.user.id)
+  if(idx===-1) return res.status(404).json({ error: 'not found' })
+  charges[idx].status = 'paid'
+  charges[idx].paidAt = Date.now()
+  writeCharges(charges)
+  // update user plan
+  try{
+    const users = readJson(usersFile)
+    const uidx = users.findIndex(u=>u.id===req.user.id)
+    if(uidx!==-1){ users[uidx].plan = charges[idx].plan; writeJson(usersFile, users) }
+  }catch(e){ }
+  res.json({ ok: true, charge: charges[idx] })
 })
 
 app.post('/upload', upload.array('files'), (req,res)=>{

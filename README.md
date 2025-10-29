@@ -146,3 +146,62 @@ Se quiser, eu posso:
 
 Escolha o próximo passo que prefere e eu executo (por exemplo: executar build e smoke-test agora). 
 
+PIX / Assinaturas (simulado)
+---------------------------------
+Este projeto agora inclui um fluxo de cobrança PIX simulado pronto para testes locais e para conectar a um PSP (provedor de pagamento) real.
+
+Novos endpoints:
+- POST `/api/create-charge` (autenticado) — cria uma cobrança pendente. Body: `{ plan }`. Retorna o objeto `charge` que contém `pixPayload` (string) para gerar o QR.
+- GET `/api/charges/:id` (autenticado) — obtém o status da cobrança.
+- POST `/api/webhook/pix` — endpoint que seu PSP pode chamar para notificar pagamento. Se a variável de ambiente `WEBHOOK_SECRET` estiver definida, envie o header `x-webhook-secret`.
+- POST `/api/simulate-pay` (autenticado) — para testes locais: marca uma cobrança como paga.
+
+Fluxo de teste local:
+1) Faça login em `/auth` e obtenha um `token` salvo no `localStorage`.
+2) Na página `/plans`, clique em um plano; o frontend chamará `/api/create-charge` e exibirá um QR code gerado localmente a partir do campo `pixPayload`.
+3) Para simular pagamento, envie POST `/api/simulate-pay` com body `{ chargeId }` (autenticado). O backend marcará a cobrança como `paid` e atualizará o `user.plan` no arquivo `server/data/users.json`.
+4) Em produção, substitua o `/api/create-charge` por integração do PSP e aponte o PSP para `/api/webhook/pix`.
+
+Segurança e produção
+- Nunca armazene chaves PIX/Reais em repositórios públicos. Use variáveis de ambiente: `PIX_KEY` (opcional placeholder), `WEBHOOK_SECRET` (para validar callbacks do PSP) e `JWT_SECRET`.
+
+PowerShell: erro ao executar npm
+--------------------------------
+Se você recebeu um erro do PowerShell dizendo que scripts estão desabilitados (ex.: "execução de scripts foi desabilitada neste sistema"), execute o seguinte no PowerShell como Administrador para permitir execução temporária:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Depois feche o terminal e abra um novo. Em seguida rode `npm install` normalmente.
+
+Próximo passo sugerido
+- Quer que eu conecte o fluxo a um PSP real? Diga qual (Gerencianet, Pagar.me, Mercado Pago etc.) e eu preparo a integração (endpoints e scripts) sem expor chaves.
+ - Se quiser integração com Banco Inter, este repositório já contém um adaptador stub em `server/lib/bancoInter.js`.
+
+Banco Inter - integração (guia rápido)
+-------------------------------------------------
+1) Cadastro e credenciais
+   - Crie conta empresarial no Banco Inter e habilite a API de cobranças/Pix.
+   - Peça credenciais (client_id / client_secret) para o ambiente de sandbox/produção.
+
+2) Variáveis de ambiente
+   - Defina no servidor:
+     - `PSP_PROVIDER=banco_inter`
+     - `INTER_CLIENT_ID` — seu client id
+     - `INTER_CLIENT_SECRET` — seu client secret
+     - `INTER_WEBHOOK_SECRET` — segredo opcional para validar callbacks
+     - `JWT_SECRET` — segredo para tokens JWT do app
+
+3) Implementar produção
+   - O arquivo `server/lib/bancoInter.js` é um stub. Substitua as chamadas em `createPixCharge` por requisições HTTP à API do Banco Inter (OAuth, criação de cobrança, obtenção de payload/QR).
+   - Implemente `verifyWebhook` conforme o mecanismo de assinatura do Inter (HMAC/RSA conforme doc).
+
+4) Testando localmente
+   - Defina as variáveis acima (use valores de sandbox do Inter). Em seguida, crie charges pelo frontend `/plans` e confirme pagamentos via webhook (ou use `/api/simulate-pay` para marcar manualmente).
+
+Se quiser, eu implemento a integração completa com Banco Inter (chamada real das APIs, tratamento de tokens OAuth e verificação de webhook). Para isso, diga se prefere que eu:
+1) Implemente usando apenas as chamadas HTTP (vou precisar das credenciais no ambiente para testes, não no chat). 
+2) Gerei patch com a lógica completa mas com placeholders para as credenciais (você provisiona e testa), ou
+3) Forneça um script seguro para você executar localmente que troca as placeholders por suas credenciais e testa tudo.
+

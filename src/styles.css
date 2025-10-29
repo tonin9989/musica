@@ -77,6 +77,15 @@ button:hover{filter:brightness(1.05)}
 .plan-cta{margin-top:12px;background:var(--accent);color:#051912;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
 .plan-cta[disabled]{opacity:0.6;cursor:not-allowed}
 
+/* QR modal */
+.qr-modal-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(2,6,8,0.6);display:flex;align-items:center;justify-content:center;z-index:200}
+.qr-modal{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:20px;border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,0.6);max-width:420px;width:90%;text-align:center}
+.qr-modal img{width:220px;height:220px;border-radius:12px;background:#fff;padding:6px}
+.qr-info{margin-top:12px;color:var(--muted);font-size:14px}
+.qr-paid{color:#bff2d1;font-weight:700}
+.pulse{animation:pulse 1200ms ease-in-out infinite}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+
 @media (max-width: 900px){
 	.plans-grid{grid-template-columns:repeat(2,1fr)}
 }
