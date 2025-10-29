@@ -1,4 +1,4 @@
-# ProSpotify - Clone Melhorado 🎵
+# ProMusics - Clone Melhorado 🎵
 
 Projeto completo de player de música estilo Spotify com backend Express, sistema de playlists, autenticação JWT e integração PIX para assinaturas.
 

@@ -42,7 +42,7 @@ export default function Home(){
   return (
     <div className="page home">
       <div className="home-hero card animate-fade">
-        <h1 style={{margin:0}}>Bem-vindo ao <span style={{color:'var(--accent)'}}>ProSpotify</span></h1>
+        <h1 style={{margin:0}}>Bem-vindo ao <span style={{color:'var(--accent)'}}>ProMusics</span></h1>
         <p style={{marginTop:8,color:'var(--muted)'}}>Reproduza suas músicas, gerencie playlists e escute onde quiser. As faixas abaixo são do YouTube — clique em tocar para ouvir aqui.</p>
         <div style={{marginTop:12}}>
           <button style={{marginRight:8}} onClick={()=>window.location.href='/library'}>Explorar Biblioteca</button>

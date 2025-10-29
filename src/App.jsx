@@ -39,7 +39,7 @@ export default function App(){
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="logo">
           <img src={logo} alt="logo" />
-          <span>ProSpotify</span>
+          <span>ProMusics</span>
         </div>
         <nav>
           <Link to="/" onClick={()=>setSidebarOpen(false)}>Home</Link>
