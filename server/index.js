@@ -83,8 +83,8 @@ const upload = multer({storage})
 // Simple CORS headers so vite dev server or other origins can call API during development
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.sendStatus(200)
   next()
 })
@@ -199,6 +199,19 @@ function authMiddleware(req,res,next){
     return res.status(401).json({error:'invalid token'})
   }
 }
+
+// Return current authenticated user (for persistent sessions)
+app.get('/api/me', authMiddleware, (req, res) => {
+  try{
+    const users = readJson(usersFile)
+    const u = users.find(x => x.id === req.user.id)
+    if(!u) return res.status(404).json({ error: 'user not found' })
+    const safe = { id: u.id, email: u.email, plan: u.plan || null }
+    res.json({ user: safe })
+  }catch(err){
+    res.status(500).json({ error: String(err) })
+  }
+})
 
 // Playlists CRUD (DB or JSON fallback)
 function getPlaylists(){

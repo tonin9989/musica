@@ -7,6 +7,7 @@ import Plans from './pages/Plans'
 import Settings from './pages/Settings'
 import Auth from './pages/Auth'
 import Player from './components/Player'
+import { getMe } from './lib/api'
 import logo from './logo.svg'
 import Reels from './pages/Reels'
 
@@ -18,6 +19,16 @@ export default function App(){
   useEffect(()=>{
     const raw = localStorage.getItem('user')
     if(raw) setUser(JSON.parse(raw))
+    // attempt to refresh user from backend with token
+    const token = localStorage.getItem('token')
+    if(token){
+      getMe().then(u=>{
+        setUser(u)
+      }).catch(()=>{
+        // token might be invalid; clear storage
+        localStorage.removeItem('token')
+      })
+    }
   },[])
 
   // Close sidebar on route change (better UX on mobile)
@@ -67,7 +78,7 @@ export default function App(){
           </div>
           <div className="user">Plano: <strong>{user?.plan || 'Free'}</strong></div>
         </header>
-        <main className="main">
+        <main className="main route-container">
           <Routes>
             <Route path="/" element={<Home/>} />
             <Route path="/library" element={<Library/>} />

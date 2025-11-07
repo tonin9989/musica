@@ -1,4 +1,5 @@
 import React, {useState} from 'react'
+import { login as apiLogin, register as apiRegister } from '../lib/api'
 
 export default function Auth(){
   const [mode, setMode] = useState('login')
@@ -23,21 +24,9 @@ export default function Auth(){
     if(v){ setError(v); return }
     setLoading(true)
     try{
-      const url = mode==='login' ? '/api/login' : '/api/register'
-      const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,pass})})
-      const body = await res.json()
-      if(!res.ok){
-        setError(body.error || 'Erro ao processar a requisição')
-      } else {
-        // store token and user
-        if(body.token){
-          localStorage.setItem('token', body.token)
-        }
-        if(body.user) localStorage.setItem('user', JSON.stringify(body.user))
-        setSuccess(mode==='login' ? 'Logado com sucesso' : 'Registrado e logado')
-        // small delay to show message then redirect
-        setTimeout(()=> window.location.href = '/', 900)
-      }
+      const body = mode==='login' ? await apiLogin(email, pass) : await apiRegister(email, pass)
+      setSuccess(mode==='login' ? 'Logado com sucesso' : 'Registrado e logado')
+      setTimeout(()=> window.location.href = '/', 700)
     }catch(err){
       setError('Erro: ' + (err && err.message ? err.message : String(err)))
     }finally{ setLoading(false) }
